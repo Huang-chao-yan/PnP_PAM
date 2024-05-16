@@ -1,0 +1,90 @@
+% Setup.m
+%
+  clear all, close all, randn('state',0);   %  Reset random number generator to initial state.
+% -------------------------------------------------------------
+% Generate true image and forward model
+% To generate matrix, the following code was used:
+% -------------------------------------------------------------
+  nphi=128; ns=128; n = 128;
+  %%% Load true target.
+  % Example 1.
+  %[Absorption,Emission]=MakeTarget(n);
+  % Example 2.
+  Absorption = zeros(n,n); 
+  Emission = phantom('Modified Shepp-Logan',n); 
+  
+  phi          = linspace(-pi/2,pi/2,nphi);
+  s            = linspace(-0.49,0.49,ns);
+  [S,Phi]      = meshgrid(s,phi);
+  A0           = Xraymat(S(:),Phi(:),n);
+  %[Ap,Am,A]    = AbsorptionMatrix(S(:),Phi(:),n,Absorption,A0);
+  W            = exp(-A0*Absorption(:)); 
+  A            = spdiags(W,0,ns*nphi,ns*nphi)*A0; 
+  Aparams.A    = A;
+  Aparams.nphi = nphi;
+  Aparams.ns   = ns;
+  Aparams.N    = n;
+  
+%-------------------------------------------------------------------
+% Generate the poisson distributed data 
+% using Monte Carlo generative model
+%--------------------------------------------------------------------
+iemission = find(Emission(:) ~= 0);  % Indices to pixels in the emission domain
+nemission = length(iemission);       % Number of emitting pixels
+probemission = Emission(:);          % Create normalized probability density from emitting region.
+probemission = probemission/(sum(probemission)/nemission);
+
+Nphoton = 1e5;                    % Number of emitted photon pairs
+Photon_count = zeros(ns*nphi,1);
+h = waitbar(0,'Shooting photons ..');
+for j = 1:Nphoton
+    waitbar(j/Nphoton)
+    % Draw the active pixel in the emission domain
+    jpix = iemission(floor(rand*nemission)+1);
+    % Accept or reject based on emission density value.
+    if rand < probemission(jpix)
+      % Of all the rays passing through this pixel, draw randomly one
+      irays  = find(A(:,jpix)~=0);
+      nirays = length(irays);
+      jray   = irays(floor(rand*nirays)+1);
+      % Testing if the backwards and forward moving photons arrive to
+      % detectors
+      if rand < W(jray) %(Ap(jray,jpix)<log(1/rand))&(Am(jray,jpix)<log(1/rand))
+        % both photons arrive
+        Photon_count(jray) = Photon_count(jray) + 1;
+      end
+    end
+end
+close(h)
+ Photon_count = reshape(Photon_count,nphi,ns);
+
+%------------------------------------------------------------------------
+%  Save data in structure array Data.
+%------------------------------------------------------------------------
+  Data.nx              = n;
+  Data.ny              = n;
+  Data.Aparams         = Aparams;
+  Data.gaussian_stdev  = 0;
+  Data.Poiss_bkgrnd    = 0;
+  Data.blankscan       = NaN;       %    blankscan;
+  Data.noisy_data      = Photon_count;
+  Data.Amult           = 'Amult_PET';
+  Data.ctAmult         = 'ctAmult_PET';
+
+%------------------------------------------------------------------------
+%  Display data.
+%------------------------------------------------------------------------
+  figure(1)
+    imagesc(Emission)
+    axis('square')
+    colormap(1-gray), colorbar('location','SouthOutside')
+    title('Object (True Image)')
+  figure(2)
+    imagesc(Data.noisy_data)
+    axis('square')
+    colormap(1-gray), colorbar('location','SouthOutside')
+    %title('Blurred, Noisy Image')
+  figure(3)
+    imagesc(Absorption+Emission)
+    colormap(1-gray), colorbar('location','SouthOutside')
+    title('Absorption and Emission Profiles')
