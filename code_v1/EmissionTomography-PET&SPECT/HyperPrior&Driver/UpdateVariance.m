@@ -1,0 +1,48 @@
+% function theta = UpdateVariance(j,n,hypermodel,theta0,alpha, ...
+%     L1left,L1right,L2top,L2bottom,X);
+%
+% The program updates the prior variance vector based on the current
+% estimate of the image. The Dirichlet boundary conditions are rotated 
+% from iteration to iteration to avoid bias   
+% Input:   j  -  integer, number of the iteration round
+%          n  -  integer, number of pixels per edge
+%          hypermodel - string, defining the hypermodel
+%          theta0 - scalar, scaling factor of the hypermodel
+%          alpha  - scalar, shape factor of the hypermodel
+%          L1left (L1right) - n^2 x n^2 sparse matrix, horizontal derivative 
+%          with Dirichlet boundary condition at the left (right) edge
+%          L2top (L2bottom) - n^2 x n^2 sparse matrix, vertical derivative 
+%          with Dirichlet boundary condition at the top (bottom) edge
+%          X  -  n^2 vector, current estimate of the image
+%
+% Output:  theta - n^2 vector, updated prior variance
+% 
+% Calls to: None
+%
+
+function theta = UpdateVariance(j,n,hypermodel,theta0,alpha, ...
+    L1,L2,X);%L1left,L1right,L2top,L2bottom,X);
+
+% Rotating the boundary conditions
+
+% if mod(j,4) == 1
+%    L1 = L1left; L2 = L2top;
+% elseif mod(j,4) == 2
+%    L1 = L1right; L2 = L2top;
+% elseif mod(j,4) == 3
+%    L1 = L1right; L2 = L2bottom;
+% elseif mod(j,4) == 0
+%    L1 = L1left; L2 = L2bottom;
+% end
+Dv = L1*X;
+Dh = L2*X;
+if strcmp(hypermodel,'Gamma')
+   eta = 0.5*(alpha - 2);
+   theta = theta0*(eta + sqrt((1/(2*theta0))*(Dv.^2 + Dh.^2)+eta^2));
+elseif strcmp(hypermodel,'InvGamma')
+   theta = 1/(alpha+2)*(theta0+0.5*(Dv.^2 + Dh.^2));
+end
+thmat = reshape(theta,n,n);
+threg = theta0*ones(n,n);
+threg(2:n-1,2:n-1) = thmat(2:n-1,2:n-1);
+theta = threg(:);

@@ -1,0 +1,50 @@
+function a = upre_fun(alpha,f_0,Opt_params,Cost_params,Output_params)
+
+%  This function evaluates the UPRE function:
+%    UPRE(alpha)=(1/n)||r(alpha)||^2+(2/n)trace(C^(-1/2)AA_alpha)-1
+%  Note:  trace(C^(-1/2)AA_alpha) is computed using randomized trace
+%         estimation
+
+
+   Cost_params.reg_param=alpha;
+nx      = Cost_params.nx;
+ny      = Cost_params.ny;
+d       = Cost_params.data;
+b       = Cost_params.Poiss_bkgrnd;
+sig     = Cost_params.gaussian_stdev;
+Amult   = Cost_params.Amult;
+ctAmult = Cost_params.ctAmult;
+Aparams = Cost_params.Aparams;
+n = nx*ny;
+    d_a = (d==0);
+    W = 1./(d+d_a+sig^2);
+        Cost_params.WeightMat = W;
+    [f] = gpnewton(f_0,Opt_params,Cost_params,Output_params);
+     Kf = feval(Amult,f,Aparams);
+   
+    %W = 1./(sig^2);
+    %Cost_params.Walpha = Walpha;
+      resid_vec = feval(Amult,f,Aparams) - (d-b);
+      Wr = W .* resid_vec;
+      F_alpha = resid_vec(:)'*Wr(:);
+     
+      F_alpha=.5*F_alpha;
+     v_vec =randn(nx,ny);
+      L = Cost_params.reg_matrix;
+    D_alpha=(f>0);
+    Cost_params.D_alpha = D_alpha;
+     Cost_params.max_cg_iter = 100;%      Maximimum number of CG iterations.
+    Cost_params.cg_step_tol = 1e-4; %      Stop CG when ||x_k+1 - x_k|| < step_tol.
+    Cost_params.grad_tol_factor = 1e-4;%   Stop CG when ||g_k|| < grad_tol_factor*||g_0||.
+    Cost_params.cg_io_flag = 0;%       Output CG info if ioflag = 1.
+    Cost_params.cg_figure_no = 10;%     Figure number for CG output.
+    %keyboard
+    AAtWv = feval(ctAmult,(W.^(1/2)).*v_vec,Aparams);
+    bb = D_alpha.*AAtWv;
+    w=cg_paramselect(ones(n,1),bb(:),Cost_params,'cg_Amult_PET');
+    w = reshape(w,nx,ny);
+    Aw = feval(Amult,w,Aparams);
+   CAw = (W.^(1/2)).*Aw;
+
+     a = F_alpha/n+v_vec(:)'*CAw(:)/n-(1/2);
+    

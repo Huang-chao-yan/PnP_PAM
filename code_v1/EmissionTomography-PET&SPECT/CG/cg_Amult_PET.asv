@@ -1,0 +1,21 @@
+  function y = cg_Amult_PET(x,params)
+
+   Aparams = param.Aparams;
+   D_alpha = params.D_alpha;
+   L = params.reg_operator;
+   alpha = params.reg_param;
+   W = params.WeightMat;
+   nx = params.nx;
+   ny = params.ny;
+   x = reshape(x,nx,ny);
+  
+   A  = Aparams.A;
+   Dx = D_alpha.*x;
+   aLDx = reshape(alpha*L*Dx(:),n,n);
+   DaLDx = D_alpha.*aLDx;
+  
+   ADx=reshape(A*x(:),n,n);
+   WADx=W.*ADx;
+   AtWADx = reshape(A'*WADx(:),n,n);
+   DAtWADx = D_alpha.*AtWADx;
+   y = DAtWADx(:)+DaLDx(:);
