@@ -1,4 +1,4 @@
-This is the code of Medical image reconstruction with multi-level deep learning denoiser and tight frame regularization, Applied Mathematics and Computation, 2024. 
+This is the code of Wu, T., Huang, C., Jia, S., Li, W., Chan, R., Zeng, T., & Zhou, S. K, Medical image reconstruction with multi-level deep learning denoiser and tight frame regularization, Applied Mathematics and Computation, 2024. 
 
 Here are two versions of our code. Version 1 is with the pre-trained models, version 2 may be more simple. The code is mainly written by Shilong Jia. 
 
